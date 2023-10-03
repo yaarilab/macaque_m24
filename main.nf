@@ -1,6 +1,10 @@
 $HOSTNAME = ""
 params.outdir = 'results'  
 
+// global param
+params.mate = "pair"
+params.mate2 = "single"
+
 // Process Parameters:
 // Process Parameters for Assemble_pairs_assemble_pairs:
 params.Assemble_pairs_assemble_pairs.method = "align" 
