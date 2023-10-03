@@ -98,17 +98,17 @@ R2 = readArray.grep(~/.*R2.*/)[0]
 """
 
 if file --mime-type "$R1" | grep -q gzip$; then
-	gunzip $R1
 	echo "$R1 is gzipped"
+	gunzip $R1
 else
-  echo "$R1 is not gzipped"
+	echo "$R1 is not gzipped"
 fi
 
 if file --mime-type "$R2" | grep -q gzip$; then
-	gunzip $R2
 	echo "$R2 is gzipped"
+	gunzip $R2
 else
-  echo "$R2 is not gzipped"
+	echo "$R2 is not gzipped"
 fi
 
 """
