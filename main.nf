@@ -96,8 +96,6 @@ R2 = readArray.grep(~/.*R2.*/)[0]
 
 
 """
-#!/bin/bash
-
 if [[ $R1 =~ \.gz$ ]]; then
 	gunzip $R1
 else
