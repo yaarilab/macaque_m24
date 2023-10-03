@@ -93,21 +93,26 @@ readArray = reads.toString().split(' ')
 R1 = readArray.grep(~/.*R1.*/)[0]
 R2 = readArray.grep(~/.*R2.*/)[0]
 
-
-
 """
-if [[ $R1 =~ "\.gz$" ]]; then
-	gunzip $R1
-else
-	echo "$R1 is not gzipped"
-fi
+case "$R1" in
+*.gz | *.tgz ) 
+        gunzip $R2
+        ;;
+*)
+        cp $R1 ./R2.fastq
+        echo "$R1 not gzipped"
+        ;;
+esac
 
-if [[ $R2 =~ "\.gz$" ]]; then
-	gunzip $R2
-else
-	echo "$R2 is not gzipped"
-fi
-
+case "$R2" in
+*.gz | *.tgz ) 
+        gunzip $R2!
+        ;;
+*)
+        cp $R2 ./R2.fastq
+        echo "$R2 not gzipped"
+        ;;
+esac
 """
 }
 
