@@ -69,19 +69,56 @@ if (params.reads){
 Channel
 	.fromFilePairs( params.reads , size: params.mate == "single" ? 1 : params.mate == "pair" ? 2 : params.mate == "triple" ? 3 : params.mate == "quadruple" ? 4 : -1 )
 	.ifEmpty { error "Cannot find any reads matching: ${params.reads}" }
-	.set{g_6_reads_g1_12}
+	.set{g_6_reads_g_11}
  } else {  
-	g_6_reads_g1_12 = Channel.empty()
+	g_6_reads_g_11 = Channel.empty()
  }
 
-Channel.value(params.mate).into{g_7_mate_g1_15;g_7_mate_g1_19;g_7_mate_g1_12}
+Channel.value(params.mate).into{g_7_mate_g_11;g_7_mate_g1_15;g_7_mate_g1_19;g_7_mate_g1_12}
 Channel.value(params.mate2).into{g_10_mate_g2_5;g_10_mate_g2_0}
+
+
+process unizp {
+
+input:
+ set val(name),file(reads) from g_6_reads_g_11
+ val mate from g_7_mate_g_11
+
+output:
+ set val(name),file("*.fastq$")  into g_11_reads0_g1_12
+
+script:
+
+readArray = reads.toString().split(' ')	
+R1 = readArray.grep(~/.*R1.*/)[0]
+R2 = readArray.grep(~/.*R2.*/)[0]
+
+
+
+"""
+
+if file --mime-type "$R1" | grep -q gzip$; then
+	gunzip $R1
+	echo "$R1 is gzipped"
+else
+  echo "$R1 is not gzipped"
+fi
+
+if file --mime-type "$R2" | grep -q gzip$; then
+	gunzip $R2
+	echo "$R2 is gzipped"
+else
+  echo "$R2 is not gzipped"
+fi
+
+"""
+}
 
 
 process Assemble_pairs_assemble_pairs {
 
 input:
- set val(name),file(reads) from g_6_reads_g1_12
+ set val(name),file(reads) from g_11_reads0_g1_12
  val mate from g_7_mate_g1_12
 
 output:
