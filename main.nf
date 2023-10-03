@@ -85,7 +85,7 @@ input:
  val mate from g_7_mate_g_11
 
 output:
- set val(name),file("*.fastq$")  into g_11_reads0_g1_12
+ set val(name),file("*.fastq")  into g_11_reads0_g1_12
 
 script:
 
