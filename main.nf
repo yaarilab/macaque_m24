@@ -96,13 +96,13 @@ R2 = readArray.grep(~/.*R2.*/)[0]
 
 
 """
-if [[ $R1 =~ \.gz$ ]]; then
+if [[ $R1 =~ "\.gz$" ]]; then
 	gunzip $R1
 else
 	echo "$R1 is not gzipped"
 fi
 
-if [[ $R2 =~ \.gz$ ]]; then
+if [[ $R2 =~ "\.gz$" ]]; then
 	gunzip $R2
 else
 	echo "$R2 is not gzipped"
