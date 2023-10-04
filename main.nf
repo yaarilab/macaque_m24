@@ -106,7 +106,7 @@ esac
 
 case "$R2" in
 *.gz | *.tgz ) 
-        gunzip -k $R2 > R2.fastq
+        gunzip -c $R2 > R2.fastq
         ;;
 *)
         cp $R2 ./R2.fastq
