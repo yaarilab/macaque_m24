@@ -93,13 +93,10 @@ readArray = reads.toString().split(' ')
 R1 = readArray.grep(~/.*R1.*/)[0]
 R2 = readArray.grep(~/.*R2.*/)[0]
 
-R1_zip = "readlink ${R1}"
-R2_zip = "readlink ${R2}"
-
 """
 case "$R1" in
 *.gz | *.tgz ) 
-        gunzip -k \$(${R1_zip}) 
+        gunzip -c $R1 > R1.fastq
         ;;
 *)
         cp $R1 ./R2.fastq
@@ -109,7 +106,7 @@ esac
 
 case "$R2" in
 *.gz | *.tgz ) 
-        gunzip -k \$(${R2_zip}) 
+        gunzip -k $R2 > R2.fastq
         ;;
 *)
         cp $R2 ./R2.fastq
