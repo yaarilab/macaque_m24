@@ -93,8 +93,8 @@ readArray = reads.toString().split(' ')
 R1 = readArray.grep(~/.*R1.*/)[0]
 R2 = readArray.grep(~/.*R2.*/)[0]
 
-R1_zip = "readlink ${$R1}"
-R2_zip = "readlink ${$R2}"
+R1_zip = "readlink ${R1}"
+R2_zip = "readlink ${R2}"
 
 """
 case "$R1" in
