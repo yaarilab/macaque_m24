@@ -46,21 +46,6 @@ params.Parse_header_parse_headers.method = "add"
 params.Parse_header_parse_headers.act = "min"
 params.Parse_header_parse_headers.args = "-f SAMPLE -u ${params.sample_name}"
 
-// Process Parameters for collapse_sequences_collapse_seq:
-params.collapse_sequences_collapse_seq.max_missing = 20
-params.collapse_sequences_collapse_seq.inner = "true"
-params.collapse_sequences_collapse_seq.fasta = "false"
-params.collapse_sequences_collapse_seq.act = "set" 
-params.collapse_sequences_collapse_seq.uf = "UMI" 
-params.collapse_sequences_collapse_seq.cf = "SAMPLE"
-params.collapse_sequences_collapse_seq.nproc = "${params.nproc}"
-params.collapse_sequences_collapse_seq.failed = "false"
-
-// Process Parameters for split_sequences_split_seq:
-params.split_sequences_split_seq.field = "DUPCOUNT"
-params.split_sequences_split_seq.num = 2
-params.split_sequences_split_seq.fasta = "true"
-
 if (!params.reads){params.reads = ""} 
 if (!params.mate){params.mate = ""} 
 if (!params.mate2){params.mate2 = ""} 
@@ -75,7 +60,7 @@ Channel
  }
 
 Channel.value(params.mate).into{g_7_mate_g_11;g_7_mate_g1_15;g_7_mate_g1_19;g_7_mate_g1_12}
-Channel.value(params.mate2).into{g_10_mate_g2_5;g_10_mate_g2_0}
+Channel.value(params.mate2).into{g_10_mate_g2_7;g_10_mate_g2_5;g_10_mate_g2_0}
 
 
 process unizp {
@@ -99,7 +84,7 @@ case "$R1" in
         gunzip -c $R1 > R1.fastq
         ;;
 *)
-        cp $R1 ./R2.fastq
+        cp $R1 ./R1.fastq
         echo "$R1 not gzipped"
         ;;
 esac
@@ -127,7 +112,7 @@ output:
  set val(name),file("*_assemble-pass.f*")  into g1_12_reads0_g2_0
  set val(name),file("AP_*")  into g1_12_logFile1_g1_15
  set val(name),file("*_assemble-fail.f*") optional true  into g1_12_reads_failed22
- set val(name),file("out*")  into g1_12_logFile33
+ set val(name),file("out*")  into g1_12_logFile3_g12_0
 
 script:
 method = params.Assemble_pairs_assemble_pairs.method
@@ -408,8 +393,9 @@ input:
 
 output:
  set val(name), file("*_${method}-pass.fastq")  into g2_0_reads0_g3_15
- file "FS_*"  into g2_0_logFile1_g2_5
+ set val(name), file("FS_*")  into g2_0_logFile1_g2_5
  set val(name), file("*_${method}-fail.fastq") optional true  into g2_0_reads22
+ set val(name),file("out*") optional true  into g2_0_logFile3_g12_0
 
 script:
 method = params.Filter_Sequence_Quality_filter_seq_quality.method
@@ -442,13 +428,13 @@ if(mate=="pair"){
 	R1 = readArray.grep(~/.*R1.*/)[0]
 	R2 = readArray.grep(~/.*R2.*/)[0]
 	"""
-	FilterSeq.py ${method} -s $R1 ${q} ${n_length} ${n_missing} --outname ${name}_R1 --nproc ${nproc} --log FS_R1_${name}.log --failed
-	FilterSeq.py ${method} -s $R2 ${q} ${n_length} ${n_missing} --outname ${name}_R2 --nproc ${nproc} --log FS_R2_${name}.log --failed
+	FilterSeq.py ${method} -s $R1 ${q} ${n_length} ${n_missing} --nproc ${nproc} --log FS_R1_${name}.log --failed >> out_${R1}_FS.log
+	FilterSeq.py ${method} -s $R2 ${q} ${n_length} ${n_missing} --nproc ${nproc} --log FS_R2_${name}.log --failed >> out_${R1}_FS.log
 	"""
 }else{
 	R1 = readArray[0]
 	"""
-	FilterSeq.py ${method} -s $R1 ${q} ${n_length} ${n_missing} --outname ${name} --nproc ${nproc} --log FS_${name}.log --failed
+	FilterSeq.py ${method} -s $R1 ${q} ${n_length} ${n_missing} --nproc ${nproc} --log FS_${name}.log --failed >> out_${R1}_FS.log
 	"""
 }
 
@@ -458,11 +444,12 @@ if(mate=="pair"){
 
 process Parse_header_parse_headers {
 
+publishDir params.outdir, mode: 'copy', saveAs: {filename -> if (filename =~ /.*${out}$/) "reads/$filename"}
 input:
  set val(name), file(reads) from g2_0_reads0_g3_15
 
 output:
- set val(name),file("*${out}")  into g3_15_reads0_g4_16
+ set val(name),file("*${out}")  into g3_15_reads00
 
 script:
 method = params.Parse_header_parse_headers.method
@@ -493,72 +480,6 @@ if(method=="collapse" || method=="copy" || method=="rename" || method=="merge"){
 }
 
 
-process collapse_sequences_collapse_seq {
-
-input:
- set val(name), file(reads) from g3_15_reads0_g4_16
-
-output:
- set val(name),  file("*_collapse-unique.fast*")  into g4_16_reads0_g5_20
- set val(name),  file("*_collapse-duplicate.fast*") optional true  into g4_16_reads_duplicate11
- set val(name),  file("*_collapse-undetermined.fast*") optional true  into g4_16_reads_undetermined22
- file "CS_*"  into g4_16_logFile33
-
-script:
-max_missing = params.collapse_sequences_collapse_seq.max_missing
-inner = params.collapse_sequences_collapse_seq.inner
-fasta = params.collapse_sequences_collapse_seq.fasta
-act = params.collapse_sequences_collapse_seq.act
-uf = params.collapse_sequences_collapse_seq.uf
-cf = params.collapse_sequences_collapse_seq.cf
-nproc = params.collapse_sequences_collapse_seq.nproc
-failed = params.collapse_sequences_collapse_seq.failed
-
-inner = (inner=="true") ? "--inner" : ""
-fasta = (fasta=="true") ? "--fasta" : ""
-act = (act=="none") ? "" : "--act ${act}"
-cf = (cf=="") ? "" : "--cf ${cf}"
-uf = (uf=="") ? "" : "--uf ${uf}"
-failed = (failed=="false") ? "" : "--failed"
-
-"""
-CollapseSeq.py -s ${reads} -n ${max_missing} ${fasta} ${inner} ${uf} ${cf} ${act} --log CS_${name}.log ${failed}
-"""
-
-}
-
-
-process split_sequences_split_seq {
-
-publishDir params.outdir, mode: 'copy', saveAs: {filename -> if (filename =~ /.*_atleast-.*.fast.*$/) "reads/$filename"}
-input:
- set val(name),file(reads) from g4_16_reads0_g5_20
-
-output:
- set val(name), file("*_atleast-*.fast*")  into g5_20_reads00
-
-script:
-field = params.split_sequences_split_seq.field
-num = params.split_sequences_split_seq.num
-fasta = params.split_sequences_split_seq.fasta
-
-readArray = reads.toString()
-
-if(num!=0){
-	num = " --num ${num}"
-}else{
-	num = ""
-}
-
-fasta = (fasta=="false") ? "" : "--fasta"
-
-"""
-SplitSeq.py group -s ${readArray} -f ${field} ${num} ${fasta}
-"""
-
-}
-
-
 process Filter_Sequence_Quality_parse_log_FS {
 
 input:
@@ -566,7 +487,7 @@ input:
  val mate from g_10_mate_g2_5
 
 output:
- set val(name), file("*.tab")  into g2_5_logFile00
+ set val(name), file("*.tab")  into g2_5_logFile0_g2_7
 
 script:
 readArray = log_file.toString()
@@ -575,6 +496,261 @@ readArray = log_file.toString()
 ParseLog.py -l ${readArray}  -f ID QUALITY
 """
 
+}
+
+
+process Filter_Sequence_Quality_report_filter_Seq_Quality {
+
+input:
+ val matee from g_10_mate_g2_7
+ set val(name), file(log_files) from g2_5_logFile0_g2_7
+
+output:
+ file "*.rmd"  into g2_7_rMarkdown0_g2_9
+
+
+shell:
+
+if(matee=="pair"){
+	readArray = log_files.toString().split(' ')	
+	R1 = readArray.grep(~/.*R1.*/)[0]
+	R2 = readArray.grep(~/.*R2.*/)[0]
+
+	'''
+	#!/usr/bin/env perl
+	
+	
+	my $script = <<'EOF';
+	
+	
+	
+	```{R, message=FALSE, echo=FALSE, results="hide"}
+	# Setup
+	library(prestor)
+	library(knitr)
+	library(captioner)
+	
+	plot_titles <- c("Read 1", "Read 2")
+	if (!exists("tables")) { tables <- captioner(prefix="Table") }
+	if (!exists("figures")) { figures <- captioner(prefix="Figure") }
+	figures("quality", 
+	        paste("Mean Phred quality scores for",  plot_titles[1], "(top) and", plot_titles[2], "(bottom).",
+	              "The dotted line indicates the average quality score under which reads were removed."))
+	```
+	
+	```{r, echo=FALSE}
+	quality_log_1 <- loadLogTable(file.path(".", "!{R1}"))
+	quality_log_2 <- loadLogTable(file.path(".", "!{R2}"))
+	```
+	
+	# Quality Scores
+	
+	Quality filtering is an essential step in most sequencing workflows. pRESTO’s
+	FilterSeq tool remove reads with low mean Phred quality scores. 
+	Phred quality scores are assigned to each nucleotide base call in automated 
+	sequencer traces. The quality score (`Q`) of a base call is logarithmically 
+	related to the probability that a base call is incorrect (`P`): 
+	$Q = -10 log_{10} P$. For example, a base call with `Q=30` is incorrectly 
+	assigned 1 in 1000 times. The most commonly used approach is to remove read 
+	with average `Q` below 20.
+	
+	```{r, echo=FALSE}
+	plotFilterSeq(quality_log_1, quality_log_2, titles=plot_titles, sizing="figure")
+	```
+	
+	`r figures("quality")`
+		
+	EOF
+	
+	open OUT, ">!{name}.rmd";
+	print OUT $script;
+	close OUT;
+	
+	'''
+
+}else{
+
+	readArray = log_files.toString().split(' ')
+	R1 = readArray[0]
+	
+	'''
+	#!/usr/bin/env perl
+	
+	
+	my $script = <<'EOF';
+	
+	
+	```{R, message=FALSE, echo=FALSE, results="hide"}
+	# Setup
+	library(prestor)
+	library(knitr)
+	library(captioner)
+	
+	plot_titles <- c("Read")#params$quality_titles
+	if (!exists("tables")) { tables <- captioner(prefix="Table") }
+	if (!exists("figures")) { figures <- captioner(prefix="Figure") }
+	figures("quality", 
+	        paste("Mean Phred quality scores for",  plot_titles[1],
+	              "The dotted line indicates the average quality score under which reads were removed."))
+	```
+	
+	```{r, echo=FALSE}
+	quality_log_1 <- loadLogTable(file.path(".", "!{R1}"))
+	```
+	
+	# Quality Scores
+	
+	Quality filtering is an essential step in most sequencing workflows. pRESTO’s
+	FilterSeq tool remove reads with low mean Phred quality scores. 
+	Phred quality scores are assigned to each nucleotide base call in automated 
+	sequencer traces. The quality score (`Q`) of a base call is logarithmically 
+	related to the probability that a base call is incorrect (`P`): 
+	$Q = -10 log_{10} P$. For example, a base call with `Q=30` is incorrectly 
+	assigned 1 in 1000 times. The most commonly used approach is to remove read 
+	with average `Q` below 20.
+	
+	```{r, echo=FALSE}
+	plotFilterSeq(quality_log_1, titles=plot_titles[1], sizing="figure")
+	```
+	
+	`r figures("quality")`
+	
+	EOF
+	
+	open OUT, ">!{name}.rmd";
+	print OUT $script;
+	close OUT;
+	
+	'''
+}
+}
+
+
+process Filter_Sequence_Quality_render_rmarkdown {
+
+input:
+ file rmk from g2_7_rMarkdown0_g2_9
+
+output:
+ file "*.html"  into g2_9_outputFileHTML00
+
+"""
+
+#!/usr/bin/env Rscript 
+
+rmarkdown::render("${rmk}", clean=TRUE, output_format="html_document", output_dir=".")
+
+"""
+}
+
+
+process make_report_pipeline_cat_all_file {
+
+input:
+ set val(name), file(log_file) from g1_12_logFile3_g12_0
+ set val(name), file(log_file) from g2_0_logFile3_g12_0
+
+output:
+ set val(name), file("all_out_file.log")  into g12_0_logFile0_g12_2
+
+script:
+readArray = log_file.toString()
+
+"""
+
+echo $readArray
+cat out* >> all_out_file.log
+"""
+
+}
+
+
+process make_report_pipeline_report_pipeline {
+
+input:
+ set val(name), file(log_files) from g12_0_logFile0_g12_2
+
+output:
+ file "*.rmd"  into g12_2_rMarkdown0_g12_1
+
+
+shell:
+
+readArray = log_files.toString().split(' ')
+R1 = readArray[0]
+
+'''
+#!/usr/bin/env perl
+
+
+my $script = <<'EOF';
+
+
+```{r, message=FALSE, echo=FALSE, results="hide"}
+# Setup
+library(prestor)
+library(knitr)
+library(captioner)
+
+plot_titles <- c("Read 1", "Read 2")
+if (!exists("tables")) { tables <- captioner(prefix="Table") }
+if (!exists("figures")) { figures <- captioner(prefix="Figure") }
+tables("count", 
+       "The count of reads that passed and failed each processing step.")
+figures("steps", 
+        paste("The number of reads or read sets retained at each processing step. 
+               Shown as raw counts (top) and percentages of input from the previous 
+               step (bottom). Steps having more than one column display individual values for", 
+              plot_titles[1], "(first column) and", plot_titles[2], "(second column)."))
+```
+
+```{r, echo=FALSE}
+console_log <- loadConsoleLog(file.path(".","!{R1}"))
+```
+
+# Summary of Processing Steps
+
+```{r, echo=FALSE}
+count_df <- plotConsoleLog(console_log, sizing="figure")
+```
+
+`r figures("steps")`
+
+```{r, echo=FALSE}
+kable(count_df[c("step", "task", "total", "pass", "fail")],
+      col.names=c("Step", "Task", "Input", "Passed", "Failed"),
+      digits=3)
+```
+
+`r tables("count")`
+
+
+EOF
+	
+open OUT, ">!{name}.rmd";
+print OUT $script;
+close OUT;
+
+'''
+}
+
+
+process make_report_pipeline_render_rmarkdown {
+
+publishDir params.outdir, mode: 'copy', saveAs: {filename -> if (filename =~ /.*.html$/) "outputparam/$filename"}
+input:
+ file rmk from g12_2_rMarkdown0_g12_1
+
+output:
+ file "*.html"  into g12_1_outputFileHTML00
+
+"""
+
+#!/usr/bin/env Rscript 
+
+rmarkdown::render("${rmk}", clean=TRUE, output_format="html_document", output_dir=".")
+
+"""
 }
 
 
