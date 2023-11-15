@@ -41,10 +41,6 @@ params.Filter_Sequence_Quality_filter_seq_quality.q = "20"
 params.Filter_Sequence_Quality_filter_seq_quality.n_length = "35"
 params.Filter_Sequence_Quality_filter_seq_quality.n_missing = "10"
 
-// Process Parameters for Parse_header_parse_headers:
-params.Parse_header_parse_headers.method = "add"
-params.Parse_header_parse_headers.act = "min"
-params.Parse_header_parse_headers.args = "-f SAMPLE -u ${params.sample_name}"
 
 if (!params.reads){params.reads = ""} 
 if (!params.mate){params.mate = ""} 
