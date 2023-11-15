@@ -60,7 +60,7 @@ Channel
  }
 
 Channel.value(params.mate).into{g_7_mate_g_11;g_7_mate_g1_15;g_7_mate_g1_19;g_7_mate_g1_12}
-Channel.value(params.mate2).into{g_10_mate_g2_7;g_10_mate_g2_5;g_10_mate_g2_0}
+Channel.value(params.mate2).into{g_10_mate_g_17;g_10_mate_g2_7;g_10_mate_g2_5;g_10_mate_g2_0}
 
 
 process unizp {
@@ -368,7 +368,7 @@ if(matee=="pair"){
 
 process Assemble_pairs_render_rmarkdown {
 
-publishDir params.outdir, mode: 'copy', saveAs: {filename -> if (filename =~ /.*.html$/) "assemble_pairs_report/$filename"}
+publishDir params.outdir, mode: 'copy', saveAs: {filename -> if (filename =~ /.*.html$/) "reports/$filename"}
 input:
  file rmk from g1_19_rMarkdown0_g1_22
 
@@ -392,7 +392,7 @@ input:
  val mate from g_10_mate_g2_0
 
 output:
- set val(name), file("*_${method}-pass.fastq")  into g2_0_reads0_g3_15
+ set val(name), file("*_${method}-pass.fastq")  into g2_0_reads0_g_17
  set val(name), file("FS_*")  into g2_0_logFile1_g2_5
  set val(name), file("*_${method}-fail.fastq") optional true  into g2_0_reads22
  set val(name),file("out*") optional true  into g2_0_logFile3_g12_0
@@ -442,41 +442,44 @@ if(mate=="pair"){
 }
 
 
-process Parse_header_parse_headers {
+process fatsq_to_fasta_as_is {
 
-publishDir params.outdir, mode: 'copy', saveAs: {filename -> if (filename =~ /.*${out}$/) "reads/$filename"}
+publishDir params.outdir, mode: 'copy', saveAs: {filename -> if (filename =~ /.*fasta$/) "reads/$filename"}
 input:
- set val(name), file(reads) from g2_0_reads0_g3_15
+ set val(name),  file(reads) from g2_0_reads0_g_17
+ val mate from g_10_mate_g_17
 
 output:
- set val(name),file("*${out}")  into g3_15_reads00
+ set val(name),  file("*fasta")  into g_17_airr_fasta_file00
+
+#shell example: 
+
+#!/bin/sh 
+
+
 
 script:
-method = params.Parse_header_parse_headers.method
-act = params.Parse_header_parse_headers.act
-args = params.Parse_header_parse_headers.args
+	
+readArray = reads.toString().split(' ')	
 
-
-if(method=="collapse" || method=="copy" || method=="rename" || method=="merge"){
-	out="_reheader.fastq"
+if(mate=="pair"){
+	R1 = readArray.grep(~/.*R1.*/)[0]
+	R2 = readArray.grep(~/.*R2.*/)[0]
+	
+	R1n = R1.replace('.fastq','')
+	R2n = R2.replace('.fastq','')
+	
 	"""
-	ParseHeaders.py  ${method} -s ${reads} ${args} --act ${act}
+	 awk 'NR%4==1{printf ">%s\n", substr($0,2)}NR%4==2{print}'  ${R1n}.fastq > ${R1n}.fasta
+	 awk 'NR%4==1{printf ">%s\n", substr($0,2)}NR%4==2{print}'  ${R2n}.fastq > ${R2n}.fasta
 	"""
+	
 }else{
-	if(method=="table"){
-			out=".tab"
-			"""
-			ParseHeaders.py ${method} -s ${reads} ${args}
-			"""	
-	}else{
-		out="_reheader.fastq"
-		"""
-		ParseHeaders.py ${method} -s ${reads} ${args}
-		"""		
-	}
+
+	"""
+	 awk 'NR%4==1{printf ">%s\n", substr($0,2)}NR%4==2{print}' ${name}.fastq > ${name}.fasta
+	"""
 }
-
-
 }
 
 
@@ -628,6 +631,7 @@ if(matee=="pair"){
 
 process Filter_Sequence_Quality_render_rmarkdown {
 
+publishDir params.outdir, mode: 'copy', saveAs: {filename -> if (filename =~ /.*.html$/) "reports/$filename"}
 input:
  file rmk from g2_7_rMarkdown0_g2_9
 
@@ -737,7 +741,7 @@ close OUT;
 
 process make_report_pipeline_render_rmarkdown {
 
-publishDir params.outdir, mode: 'copy', saveAs: {filename -> if (filename =~ /.*.html$/) "outputparam/$filename"}
+publishDir params.outdir, mode: 'copy', saveAs: {filename -> if (filename =~ /.*.html$/) "reports/$filename"}
 input:
  file rmk from g12_2_rMarkdown0_g12_1
 
