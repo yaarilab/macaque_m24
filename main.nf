@@ -4,6 +4,7 @@ params.outdir = 'results'
 // global param
 params.mate = "pair"
 params.mate2 = "single"
+params.run_FastQC == "yes" 
 
 // Process Parameters:
 // Process Parameters for Assemble_pairs_assemble_pairs:
@@ -55,7 +56,7 @@ Channel
 	g_6_reads_g_11 = Channel.empty()
  }
 
-Channel.value(params.mate).into{g_7_mate_g_11;g_7_mate_g1_15;g_7_mate_g1_19;g_7_mate_g1_12}
+Channel.value(params.mate).into{g_7_mate_g_11;g_7_mate_g1_15;g_7_mate_g1_19;g_7_mate_g1_12;g_7_mate_g19_6}
 Channel.value(params.mate2).into{g_10_mate_g2_7;g_10_mate_g2_5;g_10_mate_g2_0}
 
 
@@ -66,7 +67,7 @@ input:
  val mate from g_7_mate_g_11
 
 output:
- set val(name),file("*.fastq")  into g_11_reads0_g1_12
+ set val(name),file("*.fastq")  into g_11_reads0_g1_12, g_11_reads0_g19_6
 
 script:
 
@@ -94,6 +95,42 @@ case "$R2" in
         echo "$R2 not gzipped"
         ;;
 esac
+"""
+}
+
+//* params.run_FastQC =  "no"  //* @dropdown @options:"yes","no"
+if (params.run_FastQC == "no") { println "INFO: FastQC will be skipped"}
+
+
+process FastQC_FastQC {
+
+publishDir params.outdir, mode: 'copy', saveAs: {filename -> if (filename =~ /.*.(html|zip)$/) "fastqc/$filename"}
+input:
+ set val(name), file(reads) from g_11_reads0_g19_6
+ val mate from g_7_mate_g19_6
+
+output:
+ file '*.{html,zip}'  into g19_6_FastQCout00
+
+errorStrategy 'retry'
+maxRetries 5
+
+script:
+nameAll = reads.toString()
+if (nameAll.contains('.gz')) {
+    file =  nameAll - '.gz' - '.gz'
+    runGzip = "ls *.gz | xargs -i echo gzip -df {} | sh"
+} else {
+    file =  nameAll 
+    runGzip = ''
+}
+"""
+if [ "${params.run_FastQC}" == "yes" ]; then
+    ${runGzip}
+    fastqc ${file} 
+else
+    touch process.skiped.html
+fi
 """
 }
 
@@ -440,12 +477,12 @@ if(mate=="pair"){
 
 process maccac_fastq_fasta {
 
-publishDir params.outdir, mode: 'copy', saveAs: {filename -> if (filename =~ /.fasta$/) "reads/$filename"}
+publishDir params.outdir, mode: 'copy', saveAs: {filename -> if (filename =~ /.*.fasta$/) "reads/$filename"}
 input:
  set val(name),  file(reads) from g2_0_reads0_g_18
 
 output:
- set val(name),  file(".fasta")  into g_18_fastaFile00
+ set val(name),  file("*.fasta")  into g_18_fastaFile00
 
 script:
 	
@@ -708,7 +745,7 @@ kable(count_df[c("step", "task", "total", "pass", "fail")],
 
 EOF
 	
-open OUT, ">!{name}.rmd";
+open OUT, ">pipeline_statistic_!{name}.rmd";
 print OUT $script;
 close OUT;
 
