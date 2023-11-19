@@ -5,6 +5,7 @@ params.outdir = 'results'
 params.mate = "pair"
 params.mate2 = "single"
 
+
 // Process Parameters:
 // Process Parameters for Assemble_pairs_assemble_pairs:
 params.Assemble_pairs_assemble_pairs.method = "align" 
@@ -55,7 +56,7 @@ Channel
 	g_6_reads_g_11 = Channel.empty()
  }
 
-Channel.value(params.mate).into{g_7_mate_g_11;g_7_mate_g1_15;g_7_mate_g1_19;g_7_mate_g1_12;g_7_mate_g19_6}
+Channel.value(params.mate).into{g_7_mate_g_11;g_7_mate_g_22;g_7_mate_g1_15;g_7_mate_g1_19;g_7_mate_g1_12}
 Channel.value(params.mate2).into{g_10_mate_g2_7;g_10_mate_g2_5;g_10_mate_g2_0}
 
 
@@ -66,7 +67,7 @@ input:
  val mate from g_7_mate_g_11
 
 output:
- set val(name),file("*.fastq")  into g_11_reads0_g1_12, g_11_reads0_g19_6
+ set val(name),file("*.fastq")  into g_11_reads0_g_22, g_11_reads0_g1_12
 
 script:
 
@@ -101,15 +102,15 @@ esac
 if (params.run_FastQC == "no") { println "INFO: FastQC will be skipped"}
 
 
-process FastQC_FastQC {
+process FastQC {
 
 publishDir params.outdir, mode: 'copy', saveAs: {filename -> if (filename =~ /.*.(html|zip)$/) "fastqc/$filename"}
 input:
- set val(name), file(reads) from g_11_reads0_g19_6
- val mate from g_7_mate_g19_6
+ set val(name), file(reads) from g_11_reads0_g_22
+ val mate from g_7_mate_g_22
 
 output:
- file '*.{html,zip}'  into g19_6_FastQCout00
+ file '*.{html,zip}'  into g_22_FastQCout00
 
 errorStrategy 'retry'
 maxRetries 5
@@ -406,6 +407,7 @@ input:
 
 output:
  file "*.html"  into g1_22_outputFileHTML00
+ file "*csv" optional true  into g1_22_csvFile11
 
 """
 
@@ -650,6 +652,7 @@ input:
 
 output:
  file "*.html"  into g2_9_outputFileHTML00
+ file "*csv" optional true  into g2_9_csvFile11
 
 """
 
@@ -684,13 +687,11 @@ cat out* >> all_out_file.log
 
 process make_report_pipeline_report_pipeline {
 
-publishDir params.outdir, mode: 'copy', saveAs: {filename -> if (filename =~ /.*.csv$/) "reports/$filename"}
 input:
  set val(name), file(log_files) from g12_0_logFile0_g12_2
 
 output:
  file "*.rmd"  into g12_2_rMarkdown0_g12_1
- file "*.csv"  into g12_2_outputFileCSV11
 
 
 shell:
@@ -766,6 +767,7 @@ input:
 
 output:
  file "*.html"  into g12_1_outputFileHTML00
+ file "*csv" optional true  into g12_1_csvFile11
 
 """
 
