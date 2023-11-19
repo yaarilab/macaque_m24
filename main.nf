@@ -4,7 +4,6 @@ params.outdir = 'results'
 // global param
 params.mate = "pair"
 params.mate2 = "single"
-params.run_FastQC == "yes" 
 
 // Process Parameters:
 // Process Parameters for Assemble_pairs_assemble_pairs:
@@ -685,11 +684,13 @@ cat out* >> all_out_file.log
 
 process make_report_pipeline_report_pipeline {
 
+publishDir params.outdir, mode: 'copy', saveAs: {filename -> if (filename =~ /.*.csv$/) "reports/$filename"}
 input:
  set val(name), file(log_files) from g12_0_logFile0_g12_2
 
 output:
  file "*.rmd"  into g12_2_rMarkdown0_g12_1
+ file "*.csv"  into g12_2_outputFileCSV11
 
 
 shell:
@@ -730,6 +731,10 @@ console_log <- loadConsoleLog(file.path(".","!{R1}"))
 
 ```{r, echo=FALSE}
 count_df <- plotConsoleLog(console_log, sizing="figure")
+
+df<-count_df[,c("task", "pass", "fail")]
+
+write.csv(df,"pipeline_statistics.csv") 
 ```
 
 `r figures("steps")`
