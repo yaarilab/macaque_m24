@@ -145,7 +145,7 @@ output:
  set val(name),file("*_assemble-pass.f*")  into g1_12_reads0_g2_0
  set val(name),file("AP_*")  into g1_12_logFile1_g1_15
  set val(name),file("*_assemble-fail.f*") optional true  into g1_12_reads_failed22
- set val(name),file("out*")  into g1_12_logFile3_g12_0
+ set val(name),file("out*")  into g1_12_logFile3_g23_0
 
 script:
 method = params.Assemble_pairs_assemble_pairs.method
@@ -384,7 +384,7 @@ if(matee=="pair"){
 
 	EOF
 	
-	open OUT, ">!{name}.rmd";
+	open OUT, ">AP_!{name}.rmd";
 	print OUT $script;
 	close OUT;
 	
@@ -429,7 +429,7 @@ output:
  set val(name), file("*_${method}-pass.fastq")  into g2_0_reads0_g_18
  set val(name), file("FS_*")  into g2_0_logFile1_g2_5
  set val(name), file("*_${method}-fail.fastq") optional true  into g2_0_reads22
- set val(name),file("out*") optional true  into g2_0_logFile3_g12_0
+ set val(name),file("out*") optional true  into g2_0_logFile33
 
 script:
 method = params.Filter_Sequence_Quality_filter_seq_quality.method
@@ -505,7 +505,7 @@ input:
  val mate from g_10_mate_g2_5
 
 output:
- set val(name), file("*.tab")  into g2_5_logFile0_g2_7
+ set val(name), file("*.tab")  into g2_5_logFile0_g2_7, g2_5_logFile0_g23_0
 
 script:
 readArray = log_file.toString()
@@ -514,6 +514,64 @@ readArray = log_file.toString()
 ParseLog.py -l ${readArray}  -f ID QUALITY
 """
 
+}
+
+
+process macca_report_pre_proceesing_pipline_cat_all_file {
+
+input:
+ set val(name), file(log_file) from g1_12_logFile3_g23_0
+ set val(name), file(log_file) from g2_5_logFile0_g23_0
+
+output:
+ set val(name), file("all_out_file.log")  into g23_0_logFile0_g23_9
+
+script:
+readArray = log_file.toString()
+
+"""
+
+echo $readArray
+cat out* >> all_out_file.log
+"""
+
+}
+
+
+process macca_report_pre_proceesing_pipline_report_pipeline_macca {
+
+publishDir params.outdir, mode: 'copy', saveAs: {filename -> if (filename =~ /.*.csv$/) "pipeline_statistics/$filename"}
+input:
+ set val(name), file(log_files) from g23_0_logFile0_g23_9
+
+output:
+ file "*.csv"  into g23_9_csvFile00
+
+
+script:
+
+readArray = log_files.toString().split(' ')
+R1 = readArray[0]
+
+"""
+#!/usr/bin/env Rscript 
+
+
+library(prestor)
+library(knitr)
+library(captioner)
+
+
+console_log <- loadConsoleLog("$R1")
+
+count_df <- plotConsoleLog(console_log, sizing="figure")
+
+df<-count_df[,c("task", "pass", "fail")]
+
+write.csv(df,"pipeline_statistics.csv") 
+
+
+"""
 }
 
 
@@ -580,7 +638,7 @@ if(matee=="pair"){
 		
 	EOF
 	
-	open OUT, ">!{name}.rmd";
+	open OUT, ">!FSQ_{name}.rmd";
 	print OUT $script;
 	close OUT;
 	
@@ -635,7 +693,7 @@ if(matee=="pair"){
 	
 	EOF
 	
-	open OUT, ">!{name}.rmd";
+	open OUT, ">FSQ_!{name}.rmd";
 	print OUT $script;
 	close OUT;
 	
@@ -653,121 +711,6 @@ input:
 output:
  file "*.html"  into g2_9_outputFileHTML00
  file "*csv" optional true  into g2_9_csvFile11
-
-"""
-
-#!/usr/bin/env Rscript 
-
-rmarkdown::render("${rmk}", clean=TRUE, output_format="html_document", output_dir=".")
-
-"""
-}
-
-
-process make_report_pipeline_cat_all_file {
-
-input:
- set val(name), file(log_file) from g1_12_logFile3_g12_0
- set val(name), file(log_file) from g2_0_logFile3_g12_0
-
-output:
- set val(name), file("all_out_file.log")  into g12_0_logFile0_g12_2
-
-script:
-readArray = log_file.toString()
-
-"""
-
-echo $readArray
-cat out* >> all_out_file.log
-"""
-
-}
-
-
-process make_report_pipeline_report_pipeline {
-
-input:
- set val(name), file(log_files) from g12_0_logFile0_g12_2
-
-output:
- file "*.rmd"  into g12_2_rMarkdown0_g12_1
-
-
-shell:
-
-readArray = log_files.toString().split(' ')
-R1 = readArray[0]
-
-'''
-#!/usr/bin/env perl
-
-
-my $script = <<'EOF';
-
-
-```{r, message=FALSE, echo=FALSE, results="hide"}
-# Setup
-library(prestor)
-library(knitr)
-library(captioner)
-
-plot_titles <- c("Read 1", "Read 2")
-if (!exists("tables")) { tables <- captioner(prefix="Table") }
-if (!exists("figures")) { figures <- captioner(prefix="Figure") }
-tables("count", 
-       "The count of reads that passed and failed each processing step.")
-figures("steps", 
-        paste("The number of reads or read sets retained at each processing step. 
-               Shown as raw counts (top) and percentages of input from the previous 
-               step (bottom). Steps having more than one column display individual values for", 
-              plot_titles[1], "(first column) and", plot_titles[2], "(second column)."))
-```
-
-```{r, echo=FALSE}
-console_log <- loadConsoleLog(file.path(".","!{R1}"))
-```
-
-# Summary of Processing Steps
-
-```{r, echo=FALSE}
-count_df <- plotConsoleLog(console_log, sizing="figure")
-
-df<-count_df[,c("task", "pass", "fail")]
-
-write.csv(df,"pipeline_statistics.csv") 
-```
-
-`r figures("steps")`
-
-```{r, echo=FALSE}
-kable(count_df[c("step", "task", "total", "pass", "fail")],
-      col.names=c("Step", "Task", "Input", "Passed", "Failed"),
-      digits=3)
-```
-
-`r tables("count")`
-
-
-EOF
-	
-open OUT, ">pipeline_statistic_!{name}.rmd";
-print OUT $script;
-close OUT;
-
-'''
-}
-
-
-process make_report_pipeline_render_rmarkdown {
-
-publishDir params.outdir, mode: 'copy', saveAs: {filename -> if (filename =~ /.*.html$/) "reports/$filename"}
-input:
- file rmk from g12_2_rMarkdown0_g12_1
-
-output:
- file "*.html"  into g12_1_outputFileHTML00
- file "*csv" optional true  into g12_1_csvFile11
 
 """
 
