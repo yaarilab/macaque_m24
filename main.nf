@@ -255,6 +255,7 @@ if(mate=="pair"){
 
 process Assemble_pairs_parse_log_AP {
 
+publishDir params.outdir, mode: 'copy', saveAs: {filename -> if (filename =~ /.*.tab$/) "reports/$filename"}
 input:
  set val(name),file(log_file) from g1_12_logFile1_g1_15
  val mate from g_7_mate_g1_15
@@ -429,7 +430,7 @@ output:
  set val(name), file("*_${method}-pass.fastq")  into g2_0_reads0_g_18
  set val(name), file("FS_*")  into g2_0_logFile1_g2_5
  set val(name), file("*_${method}-fail.fastq") optional true  into g2_0_reads22
- set val(name),file("out*") optional true  into g2_0_logFile33
+ set val(name),file("out*") optional true  into g2_0_logFile3_g23_0
 
 script:
 method = params.Filter_Sequence_Quality_filter_seq_quality.method
@@ -500,12 +501,13 @@ sed -n '1~4s/^@/>/p;2~4p' ${readArray_reads} > ${name}.fasta
 
 process Filter_Sequence_Quality_parse_log_FS {
 
+publishDir params.outdir, mode: 'copy', saveAs: {filename -> if (filename =~ /.*.tab$/) "reports/$filename"}
 input:
  set val(name), file(log_file) from g2_0_logFile1_g2_5
  val mate from g_10_mate_g2_5
 
 output:
- set val(name), file("*.tab")  into g2_5_logFile0_g2_7, g2_5_logFile0_g23_0
+ set val(name), file("*.tab")  into g2_5_logFile0_g2_7
 
 script:
 readArray = log_file.toString()
@@ -514,64 +516,6 @@ readArray = log_file.toString()
 ParseLog.py -l ${readArray}  -f ID QUALITY
 """
 
-}
-
-
-process macca_report_pre_proceesing_pipline_cat_all_file {
-
-input:
- set val(name), file(log_file) from g1_12_logFile3_g23_0
- set val(name), file(log_file) from g2_5_logFile0_g23_0
-
-output:
- set val(name), file("all_out_file.log")  into g23_0_logFile0_g23_9
-
-script:
-readArray = log_file.toString()
-
-"""
-
-echo $readArray
-cat out* >> all_out_file.log
-"""
-
-}
-
-
-process macca_report_pre_proceesing_pipline_report_pipeline_macca {
-
-publishDir params.outdir, mode: 'copy', saveAs: {filename -> if (filename =~ /.*.csv$/) "pipeline_statistics/$filename"}
-input:
- set val(name), file(log_files) from g23_0_logFile0_g23_9
-
-output:
- file "*.csv"  into g23_9_csvFile00
-
-
-script:
-
-readArray = log_files.toString().split(' ')
-R1 = readArray[0]
-
-"""
-#!/usr/bin/env Rscript 
-
-
-library(prestor)
-library(knitr)
-library(captioner)
-
-
-console_log <- loadConsoleLog("$R1")
-
-count_df <- plotConsoleLog(console_log, sizing="figure")
-
-df<-count_df[,c("task", "pass", "fail")]
-
-write.csv(df,"pipeline_statistics.csv") 
-
-
-"""
 }
 
 
@@ -717,6 +661,66 @@ output:
 #!/usr/bin/env Rscript 
 
 rmarkdown::render("${rmk}", clean=TRUE, output_format="html_document", output_dir=".")
+
+"""
+}
+
+
+process macca_report_pre_proceesing_pipline_cat_all_file {
+
+input:
+ set val(name), file(log_file) from g1_12_logFile3_g23_0
+ set val(name), file(log_file) from g2_0_logFile3_g23_0
+
+output:
+ set val(name), file("all_out_file.log")  into g23_0_logFile0_g23_9
+
+script:
+readArray = log_file.toString()
+
+"""
+
+echo $readArray
+cat out* >> all_out_file.log
+"""
+
+}
+
+
+process macca_report_pre_proceesing_pipline_report_pipeline_macca {
+
+publishDir params.outdir, mode: 'copy', saveAs: {filename -> if (filename =~ /.*.csv$/) "pipeline_statistics/$filename"}
+input:
+ set val(name), file(log_files) from g23_0_logFile0_g23_9
+
+output:
+ file "*.csv"  into g23_9_csvFile00
+
+
+script:
+
+readArray = log_files.toString().split(' ')
+R1 = readArray[0]
+
+"""
+#!/usr/bin/env Rscript 
+
+
+library(prestor)
+library(knitr)
+library(captioner)
+
+
+console_log <- loadConsoleLog("$R1")
+
+count_df <- plotConsoleLog(console_log, sizing="figure")
+
+df<-count_df[,c("task","total", "pass", "fail")]
+
+
+
+write.csv(df,"pipeline_statistics.csv") 
+
 
 """
 }
