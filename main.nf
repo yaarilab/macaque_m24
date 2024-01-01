@@ -67,7 +67,7 @@ input:
  val mate from g_7_mate_g_11
 
 output:
- set val(name),file("*.fastq")  into g_11_reads0_g_22, g_11_reads0_g1_12
+ set val(name),file("*.fastq")  into g_11_reads0_g_22, g_11_reads0_g_27, g_11_reads0_g1_12
 
 script:
 
@@ -95,6 +95,50 @@ case "$R2" in
         echo "$R2 not gzipped"
         ;;
 esac
+"""
+}
+
+
+process preprocessing_meta_data {
+
+publishDir params.outdir, mode: 'copy', saveAs: {filename -> if (filename =~ /.*json$/) "meta_data/$filename"}
+input:
+ set val(name), file(files) from g_11_reads0_g_27
+
+output:
+ file "*json"  into g_27_outputFile00
+
+
+"""
+#!/usr/bin/env Rscript
+
+if (!requireNamespace("jsonlite", quietly = TRUE)) {
+  install.packages("jsonlite")
+}
+library(jsonlite)
+
+
+json_data <- list(
+  sample = list(
+    data_processing = list(
+      preprocessing = list(
+        paired_reads_assembly = "align",
+        quality_thresholds = "20",
+        software_versions = list(
+            AssemblePairs = "0.7.1",
+            FilterSeq = "0.7.1"
+    	  )
+	   )
+	 )
+  )
+)
+
+# Convert to JSON string without enclosing scalar values in arrays
+json_string <- toJSON(json_data, pretty = TRUE, auto_unbox = TRUE)
+
+# Write the JSON string to a file
+writeLines(json_string, "pre_processed_metadata.json")
+
 """
 }
 
