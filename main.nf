@@ -189,7 +189,7 @@ output:
  set val(name),file("*_assemble-pass.f*")  into g1_12_reads0_g2_0
  set val(name),file("AP_*")  into g1_12_logFile1_g1_15
  set val(name),file("*_assemble-fail.f*") optional true  into g1_12_reads_failed22
- set val(name),file("out*")  into g1_12_logFile33
+ set val(name),file("out*")  into g1_12_logFile3_g23_0
 
 script:
 method = params.Assemble_pairs_assemble_pairs.method
@@ -475,7 +475,7 @@ output:
  set val(name), file("*_${method}-pass.fastq")  into g2_0_reads00
  set val(name), file("FS_*")  into g2_0_logFile1_g2_5
  set val(name), file("*_${method}-fail.fastq") optional true  into g2_0_reads2_g_18
- set val(name),file("out*") optional true  into g2_0_logFile33
+ set val(name),file("out*") optional true  into g2_0_logFile3_g23_0
 
 script:
 method = params.Filter_Sequence_Quality_filter_seq_quality.method
@@ -715,6 +715,8 @@ rmarkdown::render("${rmk}", clean=TRUE, output_format="html_document", output_di
 process macca_report_pre_proceesing_pipline_cat_all_file {
 
 input:
+ set val(name), file(log_file) from g1_12_logFile3_g23_0
+ set val(name), file(log_file) from g2_0_logFile3_g23_0
 
 output:
  set val(name), file("all_out_file.log")  into g23_0_logFile0_g23_9
