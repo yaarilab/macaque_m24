@@ -189,7 +189,7 @@ output:
  set val(name),file("*_assemble-pass.f*")  into g1_12_reads0_g2_0
  set val(name),file("AP_*")  into g1_12_logFile1_g1_15
  set val(name),file("*_assemble-fail.f*") optional true  into g1_12_reads_failed22
- set val(name),file("out*")  into g1_12_logFile3_g23_0
+ set val(name),file("out*")  into g1_12_logFile33
 
 script:
 method = params.Assemble_pairs_assemble_pairs.method
@@ -305,7 +305,7 @@ input:
  val mate from g_7_mate_g1_15
 
 output:
- set val(name),file("*.tab")  into g1_15_logFile0_g1_19
+ set val(name),file("*.tab")  into g1_15_logFile0_g1_19, g1_15_logFile0_g1_25
 
 script:
 field_to_parse = params.Assemble_pairs_parse_log_AP.field_to_parse
@@ -326,7 +326,7 @@ input:
  val matee from g_7_mate_g1_19
 
 output:
- file "*.rmd"  into g1_19_rMarkdown0_g1_22
+ file "*.rmd"  into g1_19_rMarkdown0_g1_25
 
 
 
@@ -444,15 +444,16 @@ if(matee=="pair"){
 }
 
 
-process Assemble_pairs_render_rmarkdown {
+process Assemble_pairs_presto_render_rmarkdown {
 
 publishDir params.outdir, mode: 'copy', saveAs: {filename -> if (filename =~ /.*.html$/) "reports/$filename"}
 input:
- file rmk from g1_19_rMarkdown0_g1_22
+ file rmk from g1_19_rMarkdown0_g1_25
+ file log_file from g1_15_logFile0_g1_25
 
 output:
- file "*.html"  into g1_22_outputFileHTML00
- file "*csv" optional true  into g1_22_csvFile11
+ file "*.html"  into g1_25_outputFileHTML00
+ file "*csv" optional true  into g1_25_csvFile11
 
 """
 
@@ -471,10 +472,10 @@ input:
  val mate from g_10_mate_g2_0
 
 output:
- set val(name), file("*_${method}-pass.fastq")  into g2_0_reads0_g_18
+ set val(name), file("*_${method}-pass.fastq")  into g2_0_reads00
  set val(name), file("FS_*")  into g2_0_logFile1_g2_5
- set val(name), file("*_${method}-fail.fastq") optional true  into g2_0_reads22
- set val(name),file("out*") optional true  into g2_0_logFile3_g23_0
+ set val(name), file("*_${method}-fail.fastq") optional true  into g2_0_reads2_g_18
+ set val(name),file("out*") optional true  into g2_0_logFile33
 
 script:
 method = params.Filter_Sequence_Quality_filter_seq_quality.method
@@ -525,7 +526,7 @@ process maccac_fastq_fasta {
 
 publishDir params.outdir, mode: 'copy', saveAs: {filename -> if (filename =~ /.*.fasta$/) "reads/$filename"}
 input:
- set val(name),  file(reads) from g2_0_reads0_g_18
+ set val(name),  file(reads) from g2_0_reads2_g_18
 
 output:
  set val(name),  file("*.fasta")  into g_18_fastaFile00
@@ -551,7 +552,7 @@ input:
  val mate from g_10_mate_g2_5
 
 output:
- set val(name), file("*.tab")  into g2_5_logFile0_g2_7
+ set val(name), file("*.tab")  into g2_5_logFile0_g2_7, g2_5_logFile0_g2_16
 
 script:
 readArray = log_file.toString()
@@ -570,7 +571,7 @@ input:
  set val(name), file(log_files) from g2_5_logFile0_g2_7
 
 output:
- file "*.rmd"  into g2_7_rMarkdown0_g2_9
+ file "*.rmd"  into g2_7_rMarkdown0_g2_16
 
 
 shell:
@@ -690,15 +691,16 @@ if(matee=="pair"){
 }
 
 
-process Filter_Sequence_Quality_render_rmarkdown {
+process Filter_Sequence_Quality_presto_render_rmarkdown {
 
 publishDir params.outdir, mode: 'copy', saveAs: {filename -> if (filename =~ /.*.html$/) "reports/$filename"}
 input:
- file rmk from g2_7_rMarkdown0_g2_9
+ file rmk from g2_7_rMarkdown0_g2_16
+ file log_file from g2_5_logFile0_g2_16
 
 output:
- file "*.html"  into g2_9_outputFileHTML00
- file "*csv" optional true  into g2_9_csvFile11
+ file "*.html"  into g2_16_outputFileHTML00
+ file "*csv" optional true  into g2_16_csvFile11
 
 """
 
@@ -713,8 +715,6 @@ rmarkdown::render("${rmk}", clean=TRUE, output_format="html_document", output_di
 process macca_report_pre_proceesing_pipline_cat_all_file {
 
 input:
- set val(name), file(log_file) from g1_12_logFile3_g23_0
- set val(name), file(log_file) from g2_0_logFile3_g23_0
 
 output:
  set val(name), file("all_out_file.log")  into g23_0_logFile0_g23_9
