@@ -472,9 +472,9 @@ input:
  val mate from g_10_mate_g2_0
 
 output:
- set val(name), file("*_${method}-pass.fastq")  into g2_0_reads00
+ set val(name), file("*_${method}-pass.fastq")  into g2_0_reads0_g_18
  set val(name), file("FS_*")  into g2_0_logFile1_g2_5
- set val(name), file("*_${method}-fail.fastq") optional true  into g2_0_reads2_g_18
+ set val(name), file("*_${method}-fail.fastq") optional true  into g2_0_reads22
  set val(name),file("out*") optional true  into g2_0_logFile3_g23_0
 
 script:
@@ -526,7 +526,7 @@ process maccac_fastq_fasta {
 
 publishDir params.outdir, mode: 'copy', saveAs: {filename -> if (filename =~ /.*.fasta$/) "reads/$filename"}
 input:
- set val(name),  file(reads) from g2_0_reads2_g_18
+ set val(name),  file(reads) from g2_0_reads0_g_18
 
 output:
  set val(name),  file("*.fasta")  into g_18_fastaFile00
