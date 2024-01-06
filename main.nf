@@ -41,6 +41,7 @@ params.Filter_Sequence_Quality_filter_seq_quality.nproc = "${params.nproc}"
 params.Filter_Sequence_Quality_filter_seq_quality.q = "20"
 params.Filter_Sequence_Quality_filter_seq_quality.n_length = "35"
 params.Filter_Sequence_Quality_filter_seq_quality.n_missing = "10"
+params.Filter_Sequence_Quality_filter_seq_quality.fasta = "true"
 
 
 if (!params.reads){params.reads = ""} 
@@ -467,15 +468,16 @@ rmarkdown::render("${rmk}", clean=TRUE, output_format="html_document", output_di
 
 process Filter_Sequence_Quality_filter_seq_quality {
 
+publishDir params.outdir, mode: 'copy', saveAs: {filename -> if (filename =~ /.*_${method}-pass.fast.*$/) "reads/$filename"}
 input:
  set val(name),file(reads) from g1_12_reads0_g2_0
  val mate from g_10_mate_g2_0
 
 output:
- set val(name), file("*_${method}-pass.fastq")  into g2_0_reads0_g_18
+ set val(name), file("*_${method}-pass.fast*")  into g2_0_reads00
  set val(name), file("FS_*")  into g2_0_logFile1_g2_5
- set val(name), file("*_${method}-fail.fastq") optional true  into g2_0_reads22
- set val(name),file("out*") optional true  into g2_0_logFile3_g23_0
+ set val(name), file("*_${method}-fail.fast*") optional true  into g2_0_reads22
+ set val(name),file("out*") optional true  into g2_0_logFile33
 
 script:
 method = params.Filter_Sequence_Quality_filter_seq_quality.method
@@ -483,6 +485,7 @@ nproc = params.Filter_Sequence_Quality_filter_seq_quality.nproc
 q = params.Filter_Sequence_Quality_filter_seq_quality.q
 n_length = params.Filter_Sequence_Quality_filter_seq_quality.n_length
 n_missing = params.Filter_Sequence_Quality_filter_seq_quality.n_missing
+fasta = params.Filter_Sequence_Quality_filter_seq_quality.fasta
 //* @style @condition:{method="quality",q}, {method="length",n_length}, {method="missing",n_missing} @multicolumn:{method,nproc}
 
 if(method=="quality"){
@@ -503,44 +506,23 @@ if(method=="quality"){
 
 readArray = reads.toString().split(' ')	
 
+fasta = (fasta=="true") ? "--fasta" : ""
 
 if(mate=="pair"){
 	R1 = readArray.grep(~/.*R1.*/)[0]
 	R2 = readArray.grep(~/.*R2.*/)[0]
 	"""
-	FilterSeq.py ${method} -s $R1 ${q} ${n_length} ${n_missing} --nproc ${nproc} --log FS_R1_${name}.log --failed >> out_${R1}_FS.log
-	FilterSeq.py ${method} -s $R2 ${q} ${n_length} ${n_missing} --nproc ${nproc} --log FS_R2_${name}.log --failed >> out_${R1}_FS.log
+	FilterSeq.py ${method} -s $R1 ${q} ${n_length} ${n_missing} --nproc ${nproc} --log FS_R1_${name}.log --failed ${fasta} >> out_${R1}_FS.log
+	FilterSeq.py ${method} -s $R2 ${q} ${n_length} ${n_missing} --nproc ${nproc} --log FS_R2_${name}.log --failed ${fasta} >> out_${R1}_FS.log
 	"""
 }else{
 	R1 = readArray[0]
 	"""
-	FilterSeq.py ${method} -s $R1 ${q} ${n_length} ${n_missing} --nproc ${nproc} --log FS_${name}.log --failed >> out_${R1}_FS.log
+	FilterSeq.py ${method} -s $R1 ${q} ${n_length} ${n_missing} --nproc ${nproc} --log FS_${name}.log --failed ${fasta} >> out_${R1}_FS.log
 	"""
 }
 
 
-}
-
-
-process maccac_fastq_fasta {
-
-publishDir params.outdir, mode: 'copy', saveAs: {filename -> if (filename =~ /.*.fasta$/) "reads/$filename"}
-input:
- set val(name),  file(reads) from g2_0_reads0_g_18
-
-output:
- set val(name),  file("*.fasta")  into g_18_fastaFile00
-
-script:
-	
-readArray_reads = reads.toString().split(' ')[0]	
-
-"""
-
-sed -n '1~4s/^@/>/p;2~4p' ${readArray_reads} > ${name}.fasta
-
- 
-"""
 }
 
 
@@ -716,7 +698,6 @@ process macca_report_pre_proceesing_pipline_cat_all_file {
 
 input:
  set val(name), file(log_file) from g1_12_logFile3_g23_0
- set val(name), file(log_file) from g2_0_logFile3_g23_0
 
 output:
  set val(name), file("all_out_file.log")  into g23_0_logFile0_g23_9
