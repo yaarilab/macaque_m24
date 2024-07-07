@@ -215,6 +215,7 @@ aligner = params.Assemble_pairs_assemble_pairs.aligner
 gap = params.Assemble_pairs_assemble_pairs.gap
 usearch_version = params.Assemble_pairs_assemble_pairs.usearch_version
 assemble_reference = params.Assemble_pairs_assemble_pairs.assemble_reference
+head_seqeunce_file = params.Assemble_pairs_assemble_pairs.head_seqeunce_file
 //* @style @condition:{method="align",alpha,maxerror,minlen,maxlen,scanrev}, {method="sequential",alpha,maxerror,minlen,maxlen,scanrev,ref_file,minident,evalue,maxhits,fill,aligner,align_exec,dbexec} {method="reference",ref_file,minident,evalue,maxhits,fill,aligner,align_exec,dbexec} {method="join",gap} @multicolumn:{method,coord,rc,head_fields_R1,head_fields_R2,failed,nrpoc,usearch_version},{alpha,maxerror,minlen,maxlen,scanrev}, {ref_file,minident,evalue,maxhits,fill,aligner,align_exec,dbexec}, {gap} 
 
 // args
@@ -258,8 +259,16 @@ readArray = reads.toString().split(' ')
 
 
 if(mate=="pair"){
-	R1 = readArray.grep(~/.*R1.*/)[0]
-	R2 = readArray.grep(~/.*R2.*/)[0]
+	R1 = readArray[0]
+	R2 = readArray[1]
+	
+	if(R1.contains("."+head_seqeunce_file)){
+		R1 = readArray[0]
+		R2 = readArray[1]
+	}else{
+		R2 = readArray[0]
+		R1 = readArray[1]
+	}
 	
 	"""
 	if [ "${method}" != "align" ]; then
@@ -278,12 +287,7 @@ if(mate=="pair"){
 		align_exec=""
 		dbexec=""
 	fi
-	
-	echo \$align_exec
-	echo \$dbexec
-	
-	
-	
+
 	AssemblePairs.py ${method} -1 ${R1} -2 ${R2} ${coord} ${rc} ${head_fields_R1} ${head_fields_R2} ${args} \$align_exec \$dbexec ${fasta} ${failed} --log AP_${name}.log ${nproc}  2>&1 | tee out_${R1}_AP.log
 	"""
 
@@ -467,16 +471,15 @@ rmarkdown::render("${rmk}", clean=TRUE, output_format="html_document", output_di
 
 process Filter_Sequence_Quality_filter_seq_quality {
 
-publishDir params.outdir, mode: 'copy', saveAs: {filename -> if (filename =~ /.*_${method}-pass.fast.*$/) "reads/$filename"}
 input:
  set val(name),file(reads) from g1_12_reads0_g2_0
  val mate from g_10_mate_g2_0
 
 output:
- set val(name), file("*_${method}-pass.fast*")  into g2_0_reads00
+ set val(name), file("*_${method}-pass.fast*")  into g2_0_reads0_g_29
  set val(name), file("FS_*")  into g2_0_logFile1_g2_5
  set val(name), file("*_${method}-fail.fast*") optional true  into g2_0_reads22
- set val(name),file("out*") optional true  into g2_0_logFile3_g23_0
+ set val(name),file("out*") optional true  into g2_0_logFile33
 
 script:
 method = params.Filter_Sequence_Quality_filter_seq_quality.method
@@ -487,19 +490,19 @@ n_missing = params.Filter_Sequence_Quality_filter_seq_quality.n_missing
 fasta = params.Filter_Sequence_Quality_filter_seq_quality.fasta
 //* @style @condition:{method="quality",q}, {method="length",n_length}, {method="missing",n_missing} @multicolumn:{method,nproc}
 
-if(method=="quality"){
-	q = "-q ${q}"
+if(method=="missing"){
+	q = ""
 	n_length = ""
-	n_missing = ""
+	n_missing = "-n ${n_missing}"
 }else{
 	if(method=="length"){
 		q = ""
 		n_length = "-n ${n_length}"
 		n_missing = ""
 	}else{
-		q = ""
+		q = "-q ${q}"
 		n_length = ""
-		n_missing = "-n ${n_missing}"
+		n_missing = ""
 	}
 }
 
@@ -508,8 +511,8 @@ readArray = reads.toString().split(' ')
 fasta = (fasta=="true") ? "--fasta" : ""
 
 if(mate=="pair"){
-	R1 = readArray.grep(~/.*R1.*/)[0]
-	R2 = readArray.grep(~/.*R2.*/)[0]
+	R1 = readArray[0]
+	R2 = readArray[1]
 	"""
 	FilterSeq.py ${method} -s $R1 ${q} ${n_length} ${n_missing} --nproc ${nproc} --log FS_R1_${name}.log --failed ${fasta} >> out_${R1}_FS.log
 	FilterSeq.py ${method} -s $R2 ${q} ${n_length} ${n_missing} --nproc ${nproc} --log FS_R2_${name}.log --failed ${fasta} >> out_${R1}_FS.log
@@ -525,15 +528,37 @@ if(mate=="pair"){
 }
 
 
+process maccac_fastq_fasta {
+
+publishDir params.outdir, mode: 'copy', saveAs: {filename -> if (filename =~ /.*.fasta$/) "reads/$filename"}
+input:
+ set val(name),  file(reads) from g2_0_reads0_g_29
+
+output:
+ set val(name),  file("*.fasta")  into g_29_fastaFile00
+
+script:
+	
+readArray_reads = reads.toString().split(' ')[0]	
+
+"""
+
+sed -n '1~4s/^@/>/p;2~4p' ${readArray_reads} > ${name}.fasta
+
+ 
+"""
+}
+
+
 process Filter_Sequence_Quality_parse_log_FS {
 
-publishDir params.outdir, mode: 'copy', saveAs: {filename -> if (filename =~ /.*.tab$/) "reports/$filename"}
+publishDir params.outdir, mode: 'copy', saveAs: {filename -> if (filename =~ /.*table.tab$/) "reports/$filename"}
 input:
  set val(name), file(log_file) from g2_0_logFile1_g2_5
  val mate from g_10_mate_g2_5
 
 output:
- set val(name), file("*.tab")  into g2_5_logFile0_g2_7, g2_5_logFile0_g2_16
+ set val(name), file("*table.tab")  into g2_5_logFile0_g2_7, g2_5_logFile0_g2_16
 
 script:
 readArray = log_file.toString()
@@ -548,7 +573,7 @@ ParseLog.py -l ${readArray}  -f ID QUALITY
 process Filter_Sequence_Quality_report_filter_Seq_Quality {
 
 input:
- val matee from g_10_mate_g2_7
+ val mate from g_10_mate_g2_7
  set val(name), file(log_files) from g2_5_logFile0_g2_7
 
 output:
@@ -557,10 +582,10 @@ output:
 
 shell:
 
-if(matee=="pair"){
+if(mate=="pair"){
 	readArray = log_files.toString().split(' ')	
-	R1 = readArray.grep(~/.*R1.*/)[0]
-	R2 = readArray.grep(~/.*R2.*/)[0]
+	R1 = readArray[0]
+	R2 = readArray[1]
 
 	'''
 	#!/usr/bin/env perl
@@ -608,7 +633,7 @@ if(matee=="pair"){
 		
 	EOF
 	
-	open OUT, ">!FSQ_{name}.rmd";
+	open OUT, ">FSQ_!{name}.rmd";
 	print OUT $script;
 	close OUT;
 	
@@ -697,7 +722,6 @@ process macca_report_pre_proceesing_pipline_cat_all_file {
 
 input:
  set val(name), file(log_file) from g1_12_logFile3_g23_0
- set val(name), file(log_file) from g2_0_logFile3_g23_0
 
 output:
  set val(name), file("all_out_file.log")  into g23_0_logFile0_g23_9
