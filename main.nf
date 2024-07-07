@@ -41,6 +41,7 @@ params.Filter_Sequence_Quality_filter_seq_quality.nproc = "${params.nproc}"
 params.Filter_Sequence_Quality_filter_seq_quality.q = "20"
 params.Filter_Sequence_Quality_filter_seq_quality.n_length = "35"
 params.Filter_Sequence_Quality_filter_seq_quality.n_missing = "10"
+params.Filter_Sequence_Quality_filter_seq_quality.fasta = "false"
 
 
 if (!params.reads){params.reads = ""} 
@@ -479,7 +480,7 @@ output:
  set val(name), file("*_${method}-pass.fast*")  into g2_0_reads0_g_29
  set val(name), file("FS_*")  into g2_0_logFile1_g2_5
  set val(name), file("*_${method}-fail.fast*") optional true  into g2_0_reads22
- set val(name),file("out*") optional true  into g2_0_logFile33
+ set val(name),file("out*") optional true  into g2_0_logFile3_g23_0
 
 script:
 method = params.Filter_Sequence_Quality_filter_seq_quality.method
@@ -722,6 +723,7 @@ process macca_report_pre_proceesing_pipline_cat_all_file {
 
 input:
  set val(name), file(log_file) from g1_12_logFile3_g23_0
+ set val(name), file(log_file) from g2_0_logFile3_g23_0
 
 output:
  set val(name), file("all_out_file.log")  into g23_0_logFile0_g23_9
